@@ -17,6 +17,7 @@ public class CrushedState : PlayerBaseState
         playerMovement = player.GetComponent<PlayerMovement>();
 
         //playerMovement.ChangeSize(0.10f);
+        playerMovement.SquishPlayer(0.5f);
 
         Debug.Log("Entered Crushed State");
     }
@@ -24,12 +25,27 @@ public class CrushedState : PlayerBaseState
     public override void UpdateState()
     {
         playerMovement.HandleMovement();
+        playerMovement.ApplyCharacterMove();
 
+        if (!playerMovement.characterController.isGrounded)
+        {
+            playerMovement.SetCurrentVelocity(new Vector3(
+            playerMovement.GetCurrentVelocity().x,
+            playerMovement.GetCurrentVelocity().y * 0.5f, // Slow descent by 50%
+            playerMovement.GetCurrentVelocity().z
+            ));
+        }
         currentTime -= Time.deltaTime;
         if(currentTime <= 0)
         {
             //playerMovement.ChangeSize(1f);
             playerStateMachine.SwitchState(PlayerStates.Default);
         }
+    }
+
+    public override void ExitState()
+    {
+        base.ExitState();
+        playerMovement.ResetPlayerScale();
     }
 }

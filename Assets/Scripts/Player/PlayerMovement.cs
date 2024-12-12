@@ -18,6 +18,11 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float maxLaunchHeight = 15f;
 
     [SerializeField] private float minimumSlidingSpeed = 2f;
+    public float MinimumSlidingSpeed => minimumSlidingSpeed;
+
+    public float Gravity => gravity;
+
+    public float WalkSpeed => walkSpeed;
 
     private Vector3 currentVelocity = Vector3.zero;
 
@@ -146,7 +151,7 @@ public class PlayerMovement : MonoBehaviour
     }
     public Vector3 GetCurrentVelocity()
     {
-        return currentVelocity;
+        return characterController.velocity;
     }
 
     public Vector3 AdjustSlidingVelocity(Vector3 currentVelocity, Vector3 slopeDirection, float speed)
@@ -215,13 +220,13 @@ public class PlayerMovement : MonoBehaviour
 
     public Vector3 GetGroundNormal()
     {
-        if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, characterController.height / 2 + 0.2f))
+        if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, characterController.height / 2 + 0.3f))
         {
-            Debug.Log($"Ground Normal: {hit.normal}"); // debugging
+            //Debug.Log($"Ground Normal: {hit.normal}"); // debugging
             return hit.normal;
         }
 
-        Debug.DrawRay(transform.position, Vector3.down * (characterController.height / 2 + 0.2f), Color.red); // debugging
+        Debug.DrawRay(transform.position, Vector3.down * (characterController.height / 2 + 0.3f), Color.red); // debugging
 
         Debug.Log("No raycast hit?");
         return Vector3.up;
@@ -249,6 +254,26 @@ public class PlayerMovement : MonoBehaviour
         float launchHeight = Mathf.Clamp(baseLaunchForce + (speed * speedMultiplier), minLaunchHeight, maxLaunchHeight);
         return new Vector3(currentVelocity.x, launchHeight, currentVelocity.z);
     }
+
+    public void SquishPlayer(float squishFactor)
+    {
+        squishFactor = Mathf.Clamp(squishFactor, 0.1f, 1f);
+
+        transform.localScale = new Vector3(
+        transform.localScale.x,
+        squishFactor,
+        transform.localScale.z
+        );
+    }
+    public void ResetPlayerScale()
+    {
+        transform.localScale = new Vector3(
+            transform.localScale.x,
+            1f,
+            transform.localScale.z
+        );
+    }
+
 
     /*public Vector3 AdjustSlidingVelocity(Vector3 currentVelocity, Vector3 slopeDirection, float speed)
     {

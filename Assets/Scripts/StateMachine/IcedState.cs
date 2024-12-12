@@ -17,18 +17,32 @@ public class IcedState : PlayerBaseState
 
         Debug.Log("Entered Iced State");
 
-        slidingVelocity = playerMovement.GetCurrentVelocity();
+        Vector3 initialDirection = playerMovement.GetCurrentVelocity().normalized;
+        Debug.Log($"Current Velocity Before Entering Iced State: {playerMovement.GetCurrentVelocity()}");
+
+        if (initialDirection == Vector3.zero) 
+        {
+            initialDirection = playerMovement.transform.forward;
+        }
+
+        float initialBoost = 1.5f;
+        initialDirection = SnapToCardinalDirection(initialDirection);
+
+        slidingVelocity = initialDirection * slidingSpeed * initialBoost;
+
+        //slidingVelocity = playerMovement.GetCurrentVelocity();
         //slidingVelocity = playerMovement.transform.forward * Mathf.Max(slidingSpeed, 0.1f); // debugging
-        if (slidingVelocity.magnitude < slidingSpeed)
+        /*if (slidingVelocity.magnitude < slidingSpeed)
         {
             slidingVelocity = playerMovement.transform.forward * slidingSpeed;
-        }
+        }*/
 
         playerMovement.SetCurrentVelocity(slidingVelocity);
     }
     public override void UpdateState()
     {
         //base.UpdateState();
+        playerMovement.HandleGravity();
         if (playerMovement.GetCurrentVelocity().magnitude < exitThresholdSpeed || HitFlatWall())
         {
             playerStateMachine.SwitchState(PlayerStates.Default);
@@ -44,21 +58,69 @@ public class IcedState : PlayerBaseState
 
     public override void ExitState()
     {
-        //base.ExitState();
+        base.ExitState();
         playerMovement.SetCurrentVelocity(Vector3.zero);
+    }
+
+    private static readonly Vector3[] cardinalDirections =
+        {
+            Vector3.forward,// North
+            Vector3.right,  // East
+            Vector3.back,   // South
+            Vector3.left    // West
+        };
+    private Vector3 SnapToCardinalDirection(Vector3 direction)
+    {
+        Vector3 closestDirection = Vector3.zero;
+        float maxDot = float.MinValue;
+
+        foreach (Vector3 cardinalDirection in cardinalDirections)
+        {
+            float dot = Vector3.Dot(direction, cardinalDirection);
+            if (dot > maxDot)
+            {
+                maxDot = dot;
+                closestDirection = cardinalDirection;
+            }
+        }
+
+        return closestDirection;
     }
 
     private void HandleSliding()
     {
+        Vector3 groundNormal = playerMovement.GetGroundNormal();
         Vector3 slopeDirection = Vector3.ProjectOnPlane(Vector3.down, playerMovement.GetGroundNormal()).normalized;
 
+        float slopeAngle = Vector3.Angle(groundNormal, Vector3.up);
+
+        if (slopeAngle > playerMovement.characterController.slopeLimit)
+        {
+            slidingVelocity.y = 0f;
+        }
+        else
+        {
+            slidingVelocity += slopeDirection * slidingSpeed * Time.deltaTime;
+        }
+
+        if (!playerMovement.characterController.isGrounded)
+        {
+            slidingVelocity += Vector3.down * playerMovement.Gravity * Time.deltaTime;
+        }
+
+        if(slidingVelocity.magnitude < playerMovement.MinimumSlidingSpeed)
+        {
+            slidingVelocity = slopeDirection.normalized * playerMovement.MinimumSlidingSpeed;
+        }
         Debug.Log($"Slope Direction: {slopeDirection}"); // debugging
 
-        slidingVelocity = playerMovement.AdjustSlidingVelocity(slidingVelocity, slopeDirection, slidingSpeed);
+        //slidingVelocity = SnapToCardinalDirection(slidingVelocity.normalized) * slidingVelocity.magnitude;
 
-        playerMovement.MoveAlongSlide(slidingVelocity);
+        //slidingVelocity = playerMovement.AdjustSlidingVelocity(slidingVelocity, slopeDirection, slidingSpeed);
 
-        Debug.Log($"Applying Move: {slidingVelocity}"); // debugging
+        playerMovement.ApplyCharacterMove(slidingVelocity);
+
+        //Debug.Log($"Applying Move: {slidingVelocity}"); // debugging
 
     }
 

@@ -27,6 +27,16 @@ public class SlimeTrigger : MonoBehaviour
                 playerMovement.ResetMovementSpeed();
             }
         }
+        else if (playerStateMachine.currentStateEnum == PlayerStates.Crushed)
+        {
+            playerMovement.SetCurrentVelocity(Vector3.zero);
+
+            if (inputManager.GetJumpInput())
+            {
+                isSliding = false;
+                playerStateMachine.SwitchState(PlayerStates.Default);
+            }
+        }
     }
 
     private void OnTriggerEnter(Collider other)
