@@ -1,8 +1,17 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class DefaultState : PlayerBaseState
 {
     private PlayerMovement playerMovement;
+    public override HashSet<PlayerStates> AllowedTransitions { get; } =
+        new HashSet<PlayerStates>
+        {
+            PlayerStates.Default,
+            PlayerStates.Crushed,
+            PlayerStates.Springy,
+            PlayerStates.Iced
+        };
 
     public override void EnterState(PlayerStateMachine player)
     {

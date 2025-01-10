@@ -12,7 +12,7 @@ public class PlayerStateMachine : MonoBehaviour
 
     void Start()
     {
-        SwitchStateInner(defaultState);
+        SwitchStateInner(defaultState, PlayerStates.Default);
     }
 
     void Update()
@@ -33,35 +33,48 @@ public class PlayerStateMachine : MonoBehaviour
         }
     }
 
-    public void SwitchState(PlayerStates playerStates)
+    public void SwitchState(PlayerStates newState)
     {
-        switch (playerStates)
+        if(!currentState.AllowedTransitions.Contains(newState))
+            {
+                Debug.LogWarning($"Transition from {currentStateEnum} to {newState} is not allowed.");
+                return;
+            }
+        switch (newState)
         {
             case PlayerStates.Default:
-                SwitchStateInner(defaultState);
+                SwitchStateInner(defaultState, PlayerStates.Default);
                 break;
             case PlayerStates.Crushed:
-                SwitchStateInner(crushedState);
+                SwitchStateInner(crushedState, PlayerStates.Crushed);
                 break;
             case PlayerStates.Springy:
-                SwitchStateInner(springyState);
+                SwitchStateInner(springyState, PlayerStates.Springy);
                 break;
             case PlayerStates.Iced:
-                SwitchStateInner(icedState);
+                SwitchStateInner(icedState, PlayerStates.Iced);
                 break;
         }
-        currentStateEnum = playerStates;
+        //currentStateEnum = playerStates;
         
     }
 
     // dumb fucking name
-    private void SwitchStateInner(PlayerBaseState newState)
+    private void SwitchStateInner(PlayerBaseState newState, PlayerStates newStateEnum)
     {
         currentState?.ExitState();
         currentState = newState;
+        currentStateEnum = newStateEnum;
         newState.EnterState(this);
     }
+
+    public PlayerBaseState GetCurrentState()
+    {
+        return currentState;
+    }
+
 }
+
 public enum PlayerStates
 {
     Default,

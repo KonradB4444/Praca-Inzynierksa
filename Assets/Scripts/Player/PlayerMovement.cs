@@ -1,3 +1,4 @@
+using UnityEditor;
 using UnityEngine;
 
 [RequireComponent(typeof(CharacterController))]
@@ -6,11 +7,12 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float walkSpeed = 5f;
     [SerializeField] private float jumpHeight = 2f;
     [SerializeField] private float gravity = 9.81f;
+    [SerializeField] private float gravityModifier = 1f;
     [SerializeField] private float verticalVelocity;
     [SerializeField] private Transform orientation;
 
     [SerializeField] private float maxCheckDistance = 2.0f;
-    [SerializeField] private float wallConnectionTolerance = 5f; // Tolerance for wall angle (degrees)
+    //[SerializeField] private float wallConnectionTolerance = 5f; // Tolerance for wall angle (degrees)
 
     [SerializeField] private float baseLaunchForce = 5f;
     [SerializeField] private float speedMultiplier = 0.7f;
@@ -99,7 +101,7 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    private void Jump(float jumpCooldown, float jumpMultiplier)
+    public void Jump(float jumpCooldown, float jumpMultiplier)
     {
         velocity.y = Mathf.Sqrt(jumpHeight * jumpMultiplier * 2f * gravity);
         jumpCooldownTimer = jumpCooldown;
@@ -134,7 +136,7 @@ public class PlayerMovement : MonoBehaviour
         }
         else
         {
-            velocity.y -= gravity * Time.deltaTime;
+            velocity.y -= gravity * gravityModifier * Time.deltaTime;
         }
 
         /*    verticalVelocity = -1f;
@@ -143,6 +145,16 @@ public class PlayerMovement : MonoBehaviour
         {
             verticalVelocity -= gravity * Time.deltaTime;
         }*/
+    }
+
+    public void SetGravityModifier(float modifier)
+    {
+        gravityModifier = modifier;
+    }
+
+    public void ResetGravityModifier()
+    {
+        gravityModifier = 1f;
     }
 
     public void SetCurrentVelocity(Vector3 velocity)
@@ -154,16 +166,16 @@ public class PlayerMovement : MonoBehaviour
         return characterController.velocity;
     }
 
-    public Vector3 AdjustSlidingVelocity(Vector3 currentVelocity, Vector3 slopeDirection, float speed)
+    public Vector3 AdjustSlidingVelocity(Vector3 slopeDirection, float speed)
     {
-        Vector3 slidingVelocity = currentVelocity + (slopeDirection * speed * Time.deltaTime);
+        velocity += slopeDirection * speed * Time.deltaTime;
 
-        if (slidingVelocity.magnitude < minimumSlidingSpeed)
+        if (velocity.magnitude < minimumSlidingSpeed)
         {
-            slidingVelocity = slopeDirection.normalized * minimumSlidingSpeed;
+            velocity = slopeDirection.normalized * minimumSlidingSpeed;
         }
 
-        return slidingVelocity;
+        return velocity;
     }
 
     public void SetHitboxSize(Vector3 newSize)
@@ -238,21 +250,21 @@ public class PlayerMovement : MonoBehaviour
         return Vector3.Angle(groundNormal, Vector3.up);
     }
 
-    public bool IsWallConnectedToSlope() // need a better name for this
+    /*public bool IsWallConnectedToSlope(float wallConnectionTolerance = 5f) // need a better name for this
     {
         RaycastHit hit;
-        if (Physics.Raycast(transform.position, transform.forward, out hit, maxCheckDistance))
+        if (Physics.Raycast(transform.position, orientation.forward, out hit, maxCheckDistance))
         {
             float angle = Vector3.Angle(hit.normal, Vector3.up);
             return Mathf.Abs(angle - 90f) < wallConnectionTolerance;
         }
         return false;
-    }
+    }*/
 
     public Vector3 CalculateLaunchVelocity(float speed)
     {
         float launchHeight = Mathf.Clamp(baseLaunchForce + (speed * speedMultiplier), minLaunchHeight, maxLaunchHeight);
-        return new Vector3(currentVelocity.x, launchHeight, currentVelocity.z);
+        return new Vector3(velocity.x, launchHeight, velocity.z);
     }
 
     public void SquishPlayer(float squishFactor)
@@ -288,4 +300,50 @@ public class PlayerMovement : MonoBehaviour
 
         return slidingVelocity;
     }*/
+    void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        // angle between collision normal and "up"
+        float angle = Vector3.Angle(hit.normal, Vector3.up);
+
+        // If angle is near 90‹, itfs a wall
+        // Tweak the thresholds (80, 100, etc.) as you need
+        if (angle > 80f && angle < 100f)
+        {
+            // This is pretty close to a vertical surface
+            Debug.Log("We hit a WALL.");
+            IsWallConnectedToSlope();
+            Debug.Log($"Does it work?: {IsWallConnectedToSlope()}");
+        }
+    }
+
+    public bool IsWallConnectedToSlope()
+    {
+        // We do a raycast straight down from the characterfs position
+        // (or from the base, offset by a small amount).
+        RaycastHit groundHit;
+        Vector3 rayOrigin = transform.position + Vector3.up * 0.1f; // slight offset to avoid self-intersection
+        
+        // The maximum distance should be enough to definitely hit the ground
+        float maxDistance = 1.4f;
+
+        if (Physics.Raycast(rayOrigin, Vector3.down, out groundHit, maxDistance))
+        {
+            // Calculate the angle between the ground normal and up
+            float angle = Vector3.Angle(groundHit.normal, Vector3.up);
+
+            if (angle > 25f)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        else
+        {
+            return false; //no ground below player
+        }
+    }
+
 }

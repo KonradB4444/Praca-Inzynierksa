@@ -4,6 +4,14 @@ using UnityEngine;
 
 public class CrushedState : PlayerBaseState
 {
+    public override HashSet<PlayerStates> AllowedTransitions { get; } =
+        new HashSet<PlayerStates>
+        {
+            PlayerStates.Default
+        };
+
+    private bool isInSlimeTrigger = false;
+
     private float totalTime = 3f;
     private float currentTime;
 
@@ -16,8 +24,8 @@ public class CrushedState : PlayerBaseState
 
         playerMovement = player.GetComponent<PlayerMovement>();
 
-        //playerMovement.ChangeSize(0.10f);
         playerMovement.SquishPlayer(0.5f);
+        playerMovement.SetGravityModifier(0.5f);
 
         Debug.Log("Entered Crushed State");
     }
@@ -25,21 +33,21 @@ public class CrushedState : PlayerBaseState
     public override void UpdateState()
     {
         playerMovement.HandleMovement();
+        playerMovement.HandleGravity();
+        playerMovement.HandleJump();
         playerMovement.ApplyCharacterMove();
 
-        if (!playerMovement.characterController.isGrounded)
+        if (isInSlimeTrigger == true)
         {
-            playerMovement.SetCurrentVelocity(new Vector3(
-            playerMovement.GetCurrentVelocity().x,
-            playerMovement.GetCurrentVelocity().y * 0.5f, // Slow descent by 50%
-            playerMovement.GetCurrentVelocity().z
-            ));
+            currentTime = totalTime;
         }
-        currentTime -= Time.deltaTime;
-        if(currentTime <= 0)
+        else
         {
-            //playerMovement.ChangeSize(1f);
-            playerStateMachine.SwitchState(PlayerStates.Default);
+            currentTime -= Time.deltaTime;
+            if (currentTime <= 0)
+            {
+                playerStateMachine.SwitchState(PlayerStates.Default);
+            }
         }
     }
 
@@ -47,5 +55,11 @@ public class CrushedState : PlayerBaseState
     {
         base.ExitState();
         playerMovement.ResetPlayerScale();
+        playerMovement.ResetGravityModifier();
+    }
+
+    public void SetInSlimeTrigger(bool value)
+    {
+        isInSlimeTrigger = value;
     }
 }

@@ -1,7 +1,14 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class SpringyState : PlayerBaseState
 {
+    public override HashSet<PlayerStates> AllowedTransitions { get; } =
+        new HashSet<PlayerStates>
+        {
+            PlayerStates.Default
+        };
+
     private PlayerMovement playerMovement;
 
     private float windUpMaxTime = 2f;
