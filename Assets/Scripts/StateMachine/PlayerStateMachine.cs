@@ -9,6 +9,7 @@ public class PlayerStateMachine : MonoBehaviour
     private CrushedState crushedState = new CrushedState();
     private SpringyState springyState = new SpringyState();
     private IcedState icedState = new IcedState();
+    private HurtState hurtState = new HurtState();
 
     void Start()
     {
@@ -30,6 +31,10 @@ public class PlayerStateMachine : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.I))
         {
             SwitchState(PlayerStates.Iced);
+        }
+        if (Input.GetKeyDown(KeyCode.H))
+        {
+            SwitchState(PlayerStates.Hurt);
         }
     }
 
@@ -53,6 +58,9 @@ public class PlayerStateMachine : MonoBehaviour
                 break;
             case PlayerStates.Iced:
                 SwitchStateInner(icedState, PlayerStates.Iced);
+                break;
+            case PlayerStates.Hurt:
+                SwitchStateInner(hurtState, PlayerStates.Hurt);
                 break;
         }
         //currentStateEnum = playerStates;
@@ -80,5 +88,6 @@ public enum PlayerStates
     Default,
     Crushed,
     Springy,
-    Iced
+    Iced,
+    Hurt
 }

@@ -66,6 +66,7 @@
     <Compile Include="Assets\Scripts\StateMachine\IcedState.cs" />
     <Compile Include="Assets\Scripts\Outdated\Player\States\SlidingOnSlimeState.cs" />
     <Compile Include="Assets\Scripts\Outdated\Player\States\CrushedState.cs" />
+    <Compile Include="Assets\Scripts\StateMachine\HurtState.cs" />
     <Compile Include="Assets\Scripts\Misc\CrusherTrigger.cs" />
     <Compile Include="Assets\Scripts\Outdated\Decals\SlimeDecal.cs" />
     <Compile Include="Assets\Scripts\Outdated\Player\IplayerState.cs" />
@@ -74,12 +75,14 @@
     <Compile Include="Assets\Scripts\Player\InputManager.cs" />
     <Compile Include="Assets\Scripts\Misc\Crusher.cs" />
     <Compile Include="Assets\Scripts\StateMachine\PlayerBaseState.cs" />
+    <Compile Include="Assets\Scripts\Misc\SpikeTrigger.cs" />
     <Compile Include="Assets\Scripts\Outdated\Camera\PlatformerCamera.cs" />
     <Compile Include="Assets\Scripts\Outdated\Camera\CameraController.cs" />
     <Compile Include="Assets\Scripts\StateMachine\PlayerStateMachine.cs" />
     <Compile Include="Assets\Scripts\StateMachine\DefaultState.cs" />
     <Compile Include="Assets\Scripts\Misc\SlimeTrigger.cs" />
     <Compile Include="Assets\Scripts\Player\PlayerMovement.cs" />
+    <Compile Include="Assets\Scripts\Player\GroundCheck.cs" />
     <Compile Include="Assets\Scripts\Outdated\Player\States\PlayerBaseState.cs" />
   </ItemGroup>
   <ItemGroup>

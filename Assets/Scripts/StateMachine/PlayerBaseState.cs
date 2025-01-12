@@ -4,7 +4,8 @@ using UnityEngine;
 
 public abstract class PlayerBaseState
 {
-    protected PlayerStateMachine playerStateMachine;
+    public PlayerStateMachine playerStateMachine;
+    public GroundCheck groundCheck;
 
     public abstract HashSet<PlayerStates> AllowedTransitions { get; }
     public virtual void EnterState(PlayerStateMachine player)

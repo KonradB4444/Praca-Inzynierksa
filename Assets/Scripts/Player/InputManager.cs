@@ -11,14 +11,16 @@ public class InputManager : MonoBehaviour
     [field: SerializeField]
     public bool CanJump { get; set; } = true;
 
+    private bool isShuffled = false;
+
     public Vector2 GetMovementInput()
     {
-        if(!CanMove) return Vector2.zero;
+        if (!CanMove) return Vector2.zero;
 
         var horizontal = Input.GetAxis("Horizontal");
         var vertical = Input.GetAxis("Vertical");
-        
-        return new Vector2 (horizontal, vertical);
+
+        return new Vector2(horizontal, vertical);
     }
 
     public bool GetJumpInput()
@@ -34,6 +36,11 @@ public class InputManager : MonoBehaviour
     public bool GetJumpInputDown()
     {
         return Input.GetKeyDown(keyMapperSO.jumpKey);
+    }
+
+    public void EnableShuffleInputs(bool shuffle)
+    {
+        isShuffled = shuffle;
     }
 }
 
