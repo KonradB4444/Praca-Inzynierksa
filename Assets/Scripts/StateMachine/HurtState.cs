@@ -16,16 +16,17 @@ public class HurtState : PlayerBaseState
     private Color hurtColor = Color.red;
     private Color recoveryColor = Color.blue;
 
-    private float recoveryWindow = 0.5f;
+    private float recoveryWindow = 0.5f; // Time window for recovery
     private float recoveryTimer = 0f;
     private bool recoveryAvailable = false;
     private bool recoveryTriggeredOnce = false;
 
-    private float hurtDuration = 5f;
+    private float hurtDuration = 5f; // Total duration of HurtState
     private float hurtTimer = 0f;
 
-    private float recoveryDelay = 1f;
+    private float recoveryDelay = 1f; // Delay before recovery opportunity
     private bool recoveryWindowReady = false;
+    private bool recoveryBlocked = false; // Flag to block recovery if spamming occurs
 
     public override void EnterState(PlayerStateMachine player)
     {
@@ -63,6 +64,7 @@ public class HurtState : PlayerBaseState
         recoveryAvailable = false;
         recoveryWindowReady = false;
         recoveryTriggeredOnce = false;
+        recoveryBlocked = false; // Reset flag when entering HurtState
 
         Debug.Log("Entered Hurt State");
     }
@@ -72,7 +74,14 @@ public class HurtState : PlayerBaseState
         hurtTimer += Time.deltaTime;
         playerMovement.HandleGravity();
 
-        if (hurtTimer >= recoveryDelay)
+        // Check for spamming before recovery window
+        if (!recoveryWindowReady && inputManager.GetJumpInputDown())
+        {
+            recoveryBlocked = true; // Block recovery if jump pressed too early
+            Debug.Log("Recovery blocked due to spamming.");
+        }
+
+        if (hurtTimer >= recoveryDelay && !recoveryBlocked)
         {
             recoveryWindowReady = true;
         }
@@ -132,8 +141,6 @@ public class HurtState : PlayerBaseState
 
         float jumpForce = 10f;
         playerMovement.Jump(1f, 1f, jumpForce);
-
-        //playerMovement.AddForce(Vector3.up * 10f);
 
         playerStateMachine.SwitchState(PlayerStates.Default);
     }

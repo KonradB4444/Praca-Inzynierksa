@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: KeyMapperSO
   m_EditorClassIdentifier: Assembly-CSharp::KeyMapper
   jumpKey: 32
-  crouchKey: 306
+  crouchKey: 304

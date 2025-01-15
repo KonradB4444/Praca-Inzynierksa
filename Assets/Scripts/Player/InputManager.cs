@@ -42,11 +42,15 @@ public class InputManager : MonoBehaviour
     {
         isShuffled = shuffle;
     }
+    public bool GetCrouchInput()
+    {
+        return Input.GetKey(keyMapperSO.crouchKey);
+    }
 }
 
 [CreateAssetMenu(fileName = "KeyMapperSO", menuName = "KeyMapper")]
 public class KeyMapper : ScriptableObject
 {
     public KeyCode jumpKey = KeyCode.Space;
-    public KeyCode crouchKey = KeyCode.LeftControl;
+    public KeyCode crouchKey = KeyCode.LeftShift;
 }

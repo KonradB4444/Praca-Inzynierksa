@@ -42,6 +42,14 @@ public class PlayerMovement : MonoBehaviour
 
     [SerializeField] private GroundCheck groundCheck;
 
+    [SerializeField] private bool isInWater = false;
+    [SerializeField] public float waterSurfaceY = 0f;
+
+    // Add this delegate and event to PlayerMovement
+    public delegate void CollisionHandler(ControllerColliderHit hit);
+    public event CollisionHandler OnPlayerCollide;
+
+
     private void Awake()
     {
         characterController = GetComponent<CharacterController>();
@@ -266,6 +274,7 @@ public class PlayerMovement : MonoBehaviour
         // Tweak the thresholds (80, 100, etc.) as you need
         if (angle > 80f && angle < 100f)
         {
+            OnPlayerCollide?.Invoke(hit);
             // This is pretty close to a vertical surface
             Debug.Log("We hit a WALL.");
             IsWallConnectedToSlope();
@@ -305,7 +314,6 @@ public class PlayerMovement : MonoBehaviour
     public void AddForce(Vector3 direction)
     {
         force += direction;
-        Debug.Log($"direction: {direction}");
     }
 
     public Vector3 GetForce()
@@ -333,4 +341,20 @@ public class PlayerMovement : MonoBehaviour
             playerRenderer.material.color = defaultColor;
         }
     }
+    public bool IsInWater
+    {
+        get => isInWater;
+        set => isInWater = value;
+    }
+
+    public void SetWaterSurfaceY(float surfaceY)
+    {
+        waterSurfaceY = surfaceY;
+    }
+    public void MoveVertical(float verticalSpeed)
+    {
+        // Update only the Y component of velocity
+        velocity = new Vector3(velocity.x, verticalSpeed, velocity.z);
+    }
+
 }

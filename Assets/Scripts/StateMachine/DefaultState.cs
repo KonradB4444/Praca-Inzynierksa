@@ -11,7 +11,8 @@ public class DefaultState : PlayerBaseState
             PlayerStates.Crushed,
             PlayerStates.Springy,
             PlayerStates.Iced,
-            PlayerStates.Hurt
+            PlayerStates.Hurt,
+            PlayerStates.Bubble
         };
 
     public override void EnterState(PlayerStateMachine player)
