@@ -1,4 +1,6 @@
+using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 
 public class IcedState : PlayerBaseState
@@ -14,19 +16,31 @@ public class IcedState : PlayerBaseState
 
     private float slidingSpeed = 5f;
     private float exitThresholdSpeed = 1f;
+    private GameObject iceGameObject;
+    private float maxSlidingSpeed = 10f;
+    private bool isSlidingDisabled = false;
+    private bool isLaunched = false;
+    private bool isGroundCheckReady = false;
+
+    private Vector3 lastVelocity = Vector3.zero;
 
     public override void EnterState(PlayerStateMachine player)
     {
         base.EnterState(player);
 
         playerMovement = player.GetComponent<PlayerMovement>();
+        groundCheck = player.GetComponentInChildren<GroundCheck>();
+        iceGameObject = player.transform.Find("Ice").gameObject;
+
+        iceGameObject.SetActive(true);
+
+        isLaunched = false;
 
         Debug.Log("Entered Iced State");
 
         Vector3 initialDirection = playerMovement.GetCurrentVelocity().normalized;
-        Debug.Log($"Current Velocity Before Entering Iced State: {playerMovement.GetCurrentVelocity()}");
 
-        if (initialDirection == Vector3.zero) 
+        if (initialDirection == Vector3.zero)
         {
             initialDirection = playerMovement.transform.forward;
         }
@@ -38,45 +52,55 @@ public class IcedState : PlayerBaseState
 
         playerMovement.SetCurrentVelocity(slidingVelocity);
     }
+
     public override void UpdateState()
     {
-        //base.UpdateState();
         playerMovement.HandleGravity();
-        if (playerMovement.GetCurrentVelocity().magnitude < exitThresholdSpeed && playerMovement.IsWallConnectedToSlope() == false)
+        playerMovement.ApplyCharacterMove();
+
+        Debug.Log($"sliding disabled: {isSlidingDisabled}");
+        Debug.Log($"ground check ready: {isGroundCheckReady}");
+        Debug.Log($"is launched: {isLaunched}");
+
+        if (slidingVelocity.magnitude < exitThresholdSpeed)
         {
+            Debug.Log("Exiting Iced State due to low speed.");
             playerStateMachine.SwitchState(PlayerStates.Default);
-            return;
         }
 
-        Debug.Log($"MOST NIGGAS: {playerMovement.IsWallConnectedToSlope()}");
-        if (playerMovement.IsWallConnectedToSlope() == true)
+        if (isSlidingDisabled)
         {
-            Debug.Log("Wall connected to slope.");
-            PerformLaunch();
-            //playerStateMachine.SwitchState(PlayerStates.Default);
-
+            if (isGroundCheckReady && groundCheck.isGrounded)
+            {
+                Debug.Log("Player has landed, re-enabling sliding.");
+                Debug.Log($"Dupa: {lastVelocity}");
+                playerMovement.SetCurrentVelocity(lastVelocity);
+                isGroundCheckReady = false;
+                isSlidingDisabled = false;
+                isLaunched = false;
+            }
         }
-        else
-        {
+        else 
             HandleSliding();
-        }
     }
 
     public override void ExitState()
     {
         base.ExitState();
         playerMovement.SetCurrentVelocity(Vector3.zero);
+        iceGameObject.SetActive(false);
         slidingVelocity = Vector3.zero;
         slidingSpeed = 5f;
     }
 
     private static readonly Vector3[] cardinalDirections =
-        {
-            Vector3.forward,// North
-            Vector3.right,  // East
-            Vector3.back,   // South
-            Vector3.left    // West
-        };
+    {
+        Vector3.forward, // North
+        Vector3.right,   // East
+        Vector3.back,    // South
+        Vector3.left     // West
+    };
+
     private Vector3 SnapToCardinalDirection(Vector3 direction)
     {
         Vector3 closestDirection = Vector3.zero;
@@ -98,60 +122,103 @@ public class IcedState : PlayerBaseState
     private void HandleSliding()
     {
         Vector3 groundNormal = playerMovement.GetGroundNormal();
-        Vector3 slopeDirection = Vector3.ProjectOnPlane(Vector3.down, playerMovement.GetGroundNormal()).normalized;
+        Vector3 slopeDirection = Vector3.ProjectOnPlane(Vector3.down, groundNormal).normalized;
 
-        float slopeAngle = Vector3.Angle(groundNormal, Vector3.up);
+        Vector3 slidingForce = slopeDirection * slidingSpeed * Time.deltaTime;
 
-        if (slopeAngle > playerMovement.characterController.slopeLimit)
-        {
-            slidingVelocity.y = 0f;
-        }
-        else
-        {
-            slidingVelocity += slopeDirection * slidingSpeed * Time.deltaTime;
-        }
+        float horizontalInput = playerMovement.inputManager.GetHorizontalInput();
+        Vector3 lateralMovement = playerMovement.orientation.right * horizontalInput * slidingSpeed * Time.deltaTime;
 
-        if (!playerMovement.characterController.isGrounded)
+        slidingVelocity += slidingForce;
+        slidingVelocity += lateralMovement;
+
+        if (slidingVelocity.magnitude > maxSlidingSpeed)
         {
-            slidingVelocity += Vector3.down * playerMovement.Gravity * Time.deltaTime;
+            slidingVelocity = slidingVelocity.normalized * maxSlidingSpeed;
         }
 
-        if(slidingVelocity.magnitude < playerMovement.MinimumSlidingSpeed)
+        // Apply the combined velocity
+        if (!isSlidingDisabled)
         {
-            slidingVelocity = slopeDirection.normalized * playerMovement.MinimumSlidingSpeed;
+            Debug.Log($"Dupa: Sliding Velocity {slidingVelocity}");
         }
-        //Debug.Log($"Slope Direction: {slopeDirection}"); // debugging
 
-        playerMovement.ApplyCharacterMove(slidingVelocity);
+        // Detect wall collisions
+        if (Physics.Raycast(playerMovement.transform.position, playerMovement.transform.forward, out RaycastHit hitFirst, 1f))
+        {
+            if (!hitFirst.transform.tag.Equals("Player"))
+                HandleWallCollision(hitFirst.collider);
+        }
+        else if (Physics.Raycast(playerMovement.transform.position, -playerMovement.transform.forward, out RaycastHit hitSecond, 1f))
+        {
+            if (!hitSecond.transform.tag.Equals("Player"))
+                HandleWallCollision(hitSecond.collider);
+        }
+        else if (Physics.Raycast(playerMovement.transform.position, playerMovement.transform.right, out RaycastHit hitThird, 1f))
+        {
+            if (!hitThird.transform.tag.Equals("Player"))
+                HandleWallCollision(hitThird.collider);
+        }
+        else if (Physics.Raycast(playerMovement.transform.position, -playerMovement.transform.right, out RaycastHit hitFourth, 1f))
+        {
+            if (!hitFourth.transform.tag.Equals("Player"))
+                HandleWallCollision(hitFourth.collider);
+        }
     }
 
     private void PerformLaunch()
     {
-        float currentSpeed = slidingVelocity.magnitude;
+        Debug.Log("Performing Launch!");
 
-        // Use a multiplier based on speed to make the jump stronger with more momentum
-        float launchMultiplier = Mathf.Clamp(currentSpeed / playerMovement.MinimumSlidingSpeed, 1f, 2f);
+        isSlidingDisabled = true;
 
-        // Call the Jump function from playerMovement
-        Debug.Log($"Launching player with speed: {currentSpeed} and multiplier: {launchMultiplier}");
-        playerMovement.Jump(1f, launchMultiplier);
-        playerMovement.ApplyCharacterMove();
+        var velocity = playerMovement.GetCurrentVelocity();
+        Debug.Log($"Dupa: Current Velocity {velocity}");
+        lastVelocity = new Vector3(velocity.x, Mathf.Abs(velocity.y) , velocity.z) * -1f;
 
-        // Switch to Default State after the jump
-        //playerStateMachine.SwitchState(PlayerStates.Default);
+        // Allow some side-to-side control during the launch
+        float horizontalInput = playerMovement.inputManager.GetHorizontalInput();
+        Vector3 lateralMovement = playerMovement.orientation.right * horizontalInput * slidingSpeed;
+
+        playerMovement.SetCurrentVelocity(new Vector3(lateralMovement.x, velocity.y, lateralMovement.z));
+
+        playerMovement.Jump(0f, 1.5f);
+
+        ResetWallCollisionFlag();
+
+        DelayGroundCheck();
     }
 
-
-
-/*    private bool HitFlatWall()
+    private async void DelayGroundCheck()
     {
-        RaycastHit hit;
-        if (Physics.Raycast(playerMovement.transform.position, playerMovement.orientation.forward, out hit, 1f))
+        await Task.Delay(100);
+
+        isGroundCheckReady = true;
+    }
+
+    public void HandleWallCollision(Collider collider)
+    {
+        if (collider.CompareTag("WallWithSlope"))
         {
-            float angle = Vector3.Angle(hit.normal, Vector3.up);
-            return Mathf.Abs(angle - 90f) < 5f;
+            Debug.Log("Wall connected to slope detected. Launching player.");
+            if (!isLaunched)
+            {
+                PerformLaunch();
+                isLaunched = true;
+            }
+
+            Debug.Log($"velocity: {playerMovement.GetCurrentVelocity()}");
         }
-        Debug.Log($"Dupa: {playerMovement.orientation.forward}");
-        return false;
-    }*/
+        else
+        {
+            Debug.Log("Normal wall detected. Exiting Iced State.");
+            playerStateMachine.SwitchState(PlayerStates.Default);
+        }
+    }
+
+    public void ResetWallCollisionFlag()
+    {
+        playerMovement.ResetWallCollisionFlag();
+    }
+
 }

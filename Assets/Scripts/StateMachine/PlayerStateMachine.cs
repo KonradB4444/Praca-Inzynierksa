@@ -11,6 +11,7 @@ public class PlayerStateMachine : MonoBehaviour
     private IcedState icedState = new IcedState();
     private HurtState hurtState = new HurtState();
     private BubbleState bubbleState = new BubbleState();
+    private SpikeState spikeState = new SpikeState();
 
     void Start()
     {
@@ -70,6 +71,9 @@ public class PlayerStateMachine : MonoBehaviour
             case PlayerStates.Bubble:
                 SwitchStateInner(bubbleState, PlayerStates.Bubble);
                 break;
+            case PlayerStates.Spike:
+                SwitchStateInner(spikeState, PlayerStates.Spike);
+                break;
         }
         //currentStateEnum = playerStates;
         
@@ -82,6 +86,12 @@ public class PlayerStateMachine : MonoBehaviour
         currentState = newState;
         currentStateEnum = newStateEnum;
         newState.EnterState(this);
+    }
+
+    public PlayerBaseState GetCurrentState(out PlayerBaseState playerBaseState)
+    {
+        playerBaseState = currentState;
+        return playerBaseState;
     }
 
     public PlayerBaseState GetCurrentState()
@@ -98,5 +108,6 @@ public enum PlayerStates
     Springy,
     Iced,
     Hurt,
-    Bubble
+    Bubble,
+    Spike
 }

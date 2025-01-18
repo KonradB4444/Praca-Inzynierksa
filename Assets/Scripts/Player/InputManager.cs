@@ -22,6 +22,12 @@ public class InputManager : MonoBehaviour
 
         return new Vector2(horizontal, vertical);
     }
+    public float GetHorizontalInput()
+    {
+        if (!CanMove) return 0f; // Prevent movement if disabled
+        return Input.GetAxis("Horizontal");
+    }
+
 
     public bool GetJumpInput()
     {

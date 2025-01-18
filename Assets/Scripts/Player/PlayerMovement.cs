@@ -9,7 +9,7 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float gravity = 9.81f;
     [SerializeField] private float gravityModifier = 1f;
     [SerializeField] private float verticalVelocity;
-    [SerializeField] private Transform orientation;
+    [SerializeField] public Transform orientation;
 
     [SerializeField] private float maxCheckDistance = 2.0f;
 
@@ -49,6 +49,7 @@ public class PlayerMovement : MonoBehaviour
     public delegate void CollisionHandler(ControllerColliderHit hit);
     public event CollisionHandler OnPlayerCollide;
 
+    [SerializeField] PlayerStateMachine playerStateMachine;
 
     private void Awake()
     {
@@ -152,7 +153,7 @@ public class PlayerMovement : MonoBehaviour
 
     public void SetCurrentVelocity(Vector3 velocity)
     {
-        currentVelocity = velocity;
+        this.velocity = velocity;
     }
     public Vector3 GetCurrentVelocity()
     {
@@ -265,22 +266,34 @@ public class PlayerMovement : MonoBehaviour
             transform.localScale.z
         );
     }
-    void OnControllerColliderHit(ControllerColliderHit hit)
-    {
-        // angle between collision normal and "up"
-        float angle = Vector3.Angle(hit.normal, Vector3.up);
 
-        // If angle is near 90‹, itfs a wall
-        // Tweak the thresholds (80, 100, etc.) as you need
-        if (angle > 80f && angle < 100f)
-        {
-            OnPlayerCollide?.Invoke(hit);
-            // This is pretty close to a vertical surface
-            Debug.Log("We hit a WALL.");
-            IsWallConnectedToSlope();
-            Debug.Log($"Does it work?: {IsWallConnectedToSlope()}");
-        }
+    private bool hasCollidedWithWall = false;
+
+    //void OnControllerColliderHit(ControllerColliderHit hit)
+    //{
+    //    float angle = Vector3.Angle(hit.normal, Vector3.up);
+
+    //    // Detect wall collision
+    //    if (angle == 90f && !hasCollidedWithWall)
+    //    {
+    //        hasCollidedWithWall = true; // Prevent repeated handling
+
+    //        Debug.Log($"Wall collision detected with object: {hit.collider.name}");
+
+    //        if (playerStateMachine.currentStateEnum == PlayerStates.Iced)
+    //        {
+    //            IcedState icedState = playerStateMachine.GetCurrentState() as IcedState;
+    //            icedState?.HandleWallCollision(hit.collider);
+    //        }
+    //    }
+    //}
+
+    public void ResetWallCollisionFlag()
+    {
+        hasCollidedWithWall = false;
     }
+
+
 
     public bool IsWallConnectedToSlope()
     {

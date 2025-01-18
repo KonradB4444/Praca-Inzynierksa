@@ -15,7 +15,7 @@ public class GroundCheck : MonoBehaviour
     [Header("Debug")]
     [SerializeField] private bool enableDebug = false;
 
-    void Update()
+    private void FixedUpdate()
     {
         PerformGroundCheck();
     }
@@ -23,7 +23,6 @@ public class GroundCheck : MonoBehaviour
     private void PerformGroundCheck()
     {
         isGrounded = Physics.CheckSphere(groundCheckPoint.position, groundCheckRadius, groundLayer);
-
         if (enableDebug)
         {
             DebugGroundCheck();
@@ -35,4 +34,12 @@ public class GroundCheck : MonoBehaviour
         Color debugColor = isGrounded ? Color.green : Color.red;
         Debug.DrawRay(groundCheckPoint.position, Vector3.down * groundCheckRadius, debugColor);
     }
+    private void OnDrawGizmos()
+    {
+        if (groundCheckPoint == null) return;
+
+        Gizmos.color = isGrounded ? Color.green : Color.red;
+        Gizmos.DrawWireSphere(groundCheckPoint.position, groundCheckRadius);
+    }
+
 }

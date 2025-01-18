@@ -6,7 +6,8 @@ public class BubbleState : PlayerBaseState
     public override HashSet<PlayerStates> AllowedTransitions { get; } =
     new HashSet<PlayerStates>
     {
-            PlayerStates.Default
+            PlayerStates.Default,
+            PlayerStates.Spike
     };
     private float buoyancyForce = 5f;
     private float maxBuoyancyForce = 30f;
@@ -19,10 +20,15 @@ public class BubbleState : PlayerBaseState
 
     private bool isSinking = false;
 
+    private GameObject bubbleGameObject;
+
 
     public override void EnterState(PlayerStateMachine player)
     {
         base.EnterState(player);
+
+        bubbleGameObject = player.transform.Find("Bubble").gameObject;
+        bubbleGameObject.SetActive(true);
 
         playerMovement = player.GetComponent<PlayerMovement>();
         groundCheck = player.GetComponentInChildren<GroundCheck>();
@@ -147,6 +153,7 @@ public class BubbleState : PlayerBaseState
     {
         base.ExitState();
         Debug.Log("Exited Bubble State");
+        bubbleGameObject.SetActive(false);
         playerMovement.ResetForce();
         playerMovement.OnPlayerCollide -= HandleCollision;
     }
