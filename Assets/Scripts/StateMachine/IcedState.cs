@@ -180,7 +180,9 @@ public class IcedState : PlayerBaseState
         float horizontalInput = playerMovement.inputManager.GetHorizontalInput();
         Vector3 lateralMovement = playerMovement.orientation.right * horizontalInput * slidingSpeed;
 
-        playerMovement.SetCurrentVelocity(new Vector3(lateralMovement.x, velocity.y, lateralMovement.z));
+        playerMovement.SetCurrentVelocity(new Vector3(lateralMovement.x * 0.8f, velocity.y, lateralMovement.z * 0.8f));
+
+        Debug.Log($"Dupa: lateral velocity: {lateralMovement}");
 
         playerMovement.Jump(0f, 1.5f);
 
@@ -209,7 +211,7 @@ public class IcedState : PlayerBaseState
 
             Debug.Log($"velocity: {playerMovement.GetCurrentVelocity()}");
         }
-        else
+        else if (!collider.CompareTag("Trigger"))
         {
             Debug.Log("Normal wall detected. Exiting Iced State.");
             playerStateMachine.SwitchState(PlayerStates.Default);

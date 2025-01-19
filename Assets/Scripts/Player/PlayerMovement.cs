@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEditor;
 using UnityEngine;
 
@@ -368,6 +369,29 @@ public class PlayerMovement : MonoBehaviour
     {
         // Update only the Y component of velocity
         velocity = new Vector3(velocity.x, verticalSpeed, velocity.z);
+    }
+
+    public void StartSmoothMove(Vector3 prevSpike, Vector3 nextSpike, float time)
+    {
+        StartCoroutine(SmoothMove(prevSpike, nextSpike, time));
+    }
+
+    private IEnumerator SmoothMove(Vector3 prevSpike, Vector3 nextSpike, float time)
+    {
+        float elapsedTime = 0f;
+
+        while (elapsedTime < time)
+        {
+            // Interpolate position over time
+            transform.position = Vector3.Lerp(prevSpike, nextSpike, elapsedTime / time);
+            elapsedTime += Time.deltaTime;
+            yield return null; // Wait for the next frame
+        }
+
+        // Ensure the player lands exactly on the next spike at the end
+        transform.position = nextSpike;
+
+        Debug.Log("Smooth move complete.");
     }
 
 }

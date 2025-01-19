@@ -4,145 +4,146 @@ using UnityEngine;
 public class SpikeState : PlayerBaseState
 {
     public override HashSet<PlayerStates> AllowedTransitions { get; } =
-        new HashSet<PlayerStates>
-        {
-            PlayerStates.Default
-        };
-
-    private float launchForce = 10f; // Adjustable force for launching
-    private float spikeDetectionRadius = 5000f; // Radius to detect nearest spikes
-    private float stateDuration = 2f; // Time window to press jump
-    private float currentTime;
+        new HashSet<PlayerStates> { PlayerStates.Default };
 
     private PlayerMovement playerMovement;
-    private Transform currentSpike;
-    private HashSet<Transform> visitedSpikes = new HashSet<Transform>();
+    private InputManager inputManager;
+    private SpikeTrigger currentSpikeTrigger;
+    private float baseTime = 0.5f;
+    private float timer; 
+    private bool hasJumped = false;
+    private bool goingForward = true;
 
     public override void EnterState(PlayerStateMachine player)
     {
         base.EnterState(player);
         playerMovement = player.GetComponent<PlayerMovement>();
-        Debug.Log("Entered SpikeState.");
+        inputManager = player.GetComponent<InputManager>();
 
-        if (playerMovement == null)
-        {
-            Debug.LogError("PlayerMovement is null in SpikeState!");
-            return;
-        }
+        inputManager.CanMove = false;
+        inputManager.CanJump = true;
 
-        currentTime = stateDuration;
+        playerMovement.SetCurrentVelocity(Vector3.zero);
 
-        // Ensure currentSpike is assigned by SpikeTrigger
-        if (currentSpike == null)
-        {
-            Debug.LogWarning("No currentSpike assigned! Transitioning to DefaultState.");
-            playerStateMachine.SwitchState(PlayerStates.Default);
-            return;
-        }
+        timer = baseTime;
+        hasJumped = false;
+        goingForward = true;
 
-        // Snap player to the current spike
-        playerMovement.SetCurrentVelocity(Vector3.zero); // Stop movement
-        player.transform.position = currentSpike.position; // Snap to spike
-        visitedSpikes.Add(currentSpike);
-        Debug.Log($"Player stuck to spike: {currentSpike.position}");
+        Debug.Log("Entered Spike State. Timer started.");
+    }
+
+    public void SetCurrentSpikeTrigger(SpikeTrigger spikeTrigger)
+    {
+        currentSpikeTrigger = spikeTrigger;
+        StickPlayerToSpike();
     }
 
     public override void UpdateState()
     {
-        currentTime -= Time.deltaTime;
+        timer -= Time.deltaTime;
 
-        Debug.Log($"current time: {currentTime}");
-        Debug.Log($"current spike: {currentSpike}");
-        Debug.Log($"visited spikes: {visitedSpikes}");
+        Debug.Log($"timer: {timer}");
 
-        playerMovement.HandleMovement();
-        playerMovement.ApplyCharacterMove();
-
-        // If the player doesn't press jump in time, return to Default State
-        if (currentTime <= 0f)
+        if (timer > 0 && inputManager.GetJumpInputDown() && !hasJumped)
         {
-            playerStateMachine.SwitchState(PlayerStates.Default);
-            return;
+            hasJumped = true;
+            JumpToNextSpike();
         }
 
-        // Check for jump input
-        if (playerMovement.inputManager.GetJumpInputDown())
+        if (timer <= 0 && !hasJumped)
         {
-            Vector3 targetSpike = FindNearestSpike();
-            if (targetSpike != Vector3.zero)
+            Debug.Log("Timer expired. Returning to default state.");
+            playerStateMachine.SwitchState(PlayerStates.Default);
+        }
+    }
+
+    private void JumpToNextSpike()
+    {
+        if (currentSpikeTrigger != null)
+        {
+            if (currentSpikeTrigger.nextSpike != null && currentSpikeTrigger.prevSpike == null)
             {
-                LaunchToSpike(targetSpike);
+                goingForward = true;
+            }
+            else if (currentSpikeTrigger.nextSpike == null && currentSpikeTrigger.prevSpike != null)
+            {
+                goingForward = false;
+            }
+        }
+
+        if (goingForward && currentSpikeTrigger != null && currentSpikeTrigger.nextSpike != null)
+        {
+            Debug.Log($"Jumping to next spike at {currentSpikeTrigger.nextSpike.position}");
+
+            playerMovement.StartSmoothMove(
+                playerMovement.transform.position,
+                currentSpikeTrigger.nextSpike.position,
+                0.5f 
+            );
+
+            SpikeTrigger nextSpikeTrigger = currentSpikeTrigger.nextSpike.GetComponent<SpikeTrigger>();
+            if (nextSpikeTrigger != null)
+            {
+                SetCurrentSpikeTrigger(nextSpikeTrigger);
             }
             else
             {
+                Debug.LogError("No SpikeTrigger found on the next spike!");
                 playerStateMachine.SwitchState(PlayerStates.Default);
             }
         }
-    }
-
-    private Vector3 FindNearestSpike()
-    {
-        Collider[] spikeColliders = Physics.OverlapSphere(playerMovement.transform.position, spikeDetectionRadius);
-        Collider nearestSpike = null;
-        float nearestDistance = Mathf.Infinity;
-
-        foreach (Collider spike in spikeColliders)
+        else if (!goingForward && currentSpikeTrigger != null && currentSpikeTrigger.prevSpike != null)
         {
-            if (!spike.CompareTag("Spikes") || visitedSpikes.Contains(spike.transform)) continue;
+            Debug.Log($"Jumping to next spike at {currentSpikeTrigger.prevSpike.position}");
 
-            float distance = Vector3.Distance(playerMovement.transform.position, spike.transform.position);
-            if (distance < nearestDistance)
+            playerMovement.StartSmoothMove(
+                playerMovement.transform.position,
+                currentSpikeTrigger.prevSpike.position,
+                0.5f
+            );
+            SpikeTrigger previousSpikeTrigger = currentSpikeTrigger.prevSpike.GetComponent<SpikeTrigger>();
+            if (previousSpikeTrigger != null)
             {
-                nearestSpike = spike;
-                nearestDistance = distance;
+                SetCurrentSpikeTrigger(previousSpikeTrigger);
+            }
+            else
+            {
+                Debug.LogError("No SpikeTrigger found on the next spike!");
+                playerStateMachine.SwitchState(PlayerStates.Default);
             }
         }
-
-        return nearestSpike != null ? nearestSpike.transform.position : Vector3.zero;
-    }
-
-    private void LaunchToSpike(Vector3 targetPosition)
-    {
-        Vector3 direction = (targetPosition - playerMovement.transform.position).normalized;
-        Vector3 launchVelocity = direction * launchForce;
-
-        // Use PlayerMovement's method to set velocity
-        playerMovement.SetCurrentVelocity(launchVelocity);
-
-        Debug.Log($"Launching to {targetPosition} with velocity {launchVelocity}");
-
-        currentSpike = FindSpikeTransform(targetPosition);
-        if (currentSpike != null)
+        else
         {
-            visitedSpikes.Add(currentSpike);
+            Debug.LogError("No next spike available!");
+            playerStateMachine.SwitchState(PlayerStates.Default);
         }
     }
 
-    private Transform FindSpikeTransform(Vector3 position)
+
+    private void StickPlayerToSpike()
     {
-        Collider[] spikeColliders = Physics.OverlapSphere(position, 0.5f);
-        foreach (Collider spike in spikeColliders)
+        if (currentSpikeTrigger != null)
         {
-            if (spike.CompareTag("Spikes"))
-            {
-                return spike.transform;
-            }
+            playerMovement.characterController.enabled = false;
+            playerMovement.transform.position = currentSpikeTrigger.transform.position;
+            playerMovement.characterController.enabled = true;
+
+            Debug.Log("Player stuck to spike.");
         }
-        return null;
     }
 
-    public void AssignCurrentSpike(Transform spikeTransform)
+    public void ResetTimer()
     {
-        if (spikeTransform == null || visitedSpikes.Contains(spikeTransform)) return;
-
-        currentSpike = spikeTransform;
-        visitedSpikes.Add(currentSpike); // Mark the spike as visited
-        Debug.Log($"Assigned currentSpike: {currentSpike.position}");
+        timer = baseTime;
+        hasJumped = false;
+        Debug.Log("SpikeState timer reset.");
     }
 
     public override void ExitState()
     {
-        base.ExitState();
-        currentSpike = null; // Clear the current spike reference
+        inputManager.CanMove = true;
+        inputManager.CanJump = true;
+
+        Debug.Log("Exited Spike State.");
     }
 }
