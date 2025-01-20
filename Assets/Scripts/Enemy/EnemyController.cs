@@ -22,7 +22,7 @@ public class EnemyController : MonoBehaviour
     private Quaternion initialRotation;
     private Quaternion targetRotation;
 
-    public bool isPlayerInHammerTrigger = false; // Reference for HammerTrigger
+    public bool isPlayerInHammerTrigger = false;
 
     private enum EnemyState { Patrolling, Chasing, Attacking, IgnoringPlayer }
     private EnemyState currentState;
@@ -145,15 +145,13 @@ public class EnemyController : MonoBehaviour
         Vector3 directionToPlayer = (player.position - transform.position).normalized;
         Quaternion lookRotation = Quaternion.LookRotation(new Vector3(directionToPlayer.x, 0, directionToPlayer.z)) * Quaternion.Euler(0, 15f, 0);
 
-        float rotationSpeed = 30f; // Adjust rotation speed as needed
+        float rotationSpeed = 30f;
         while (Quaternion.Angle(transform.rotation, lookRotation) > 0.1f)
         {
             transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * rotationSpeed);
             yield return null;
         }
 
-
-        // Swing the hammer forward
         float elapsedTime = 0f;
         while (elapsedTime < 45f / swingSpeed)
         {
@@ -166,7 +164,6 @@ public class EnemyController : MonoBehaviour
         if (isPlayerInHammerTrigger)
         {
             Debug.Log("Player hit by hammer!");
-            //playerStateMachine.SwitchState(PlayerStates.Springy);
             hammerTrigger.SetActive(false);
             currentState = EnemyState.IgnoringPlayer;
             ignorePlayerTimer = ignorePlayerTime;
@@ -174,7 +171,6 @@ public class EnemyController : MonoBehaviour
             MoveToRandomPatrolPoint();
         }
 
-        // Swing the hammer back to initial position
         elapsedTime = 0f;
         while (elapsedTime < 45f / swingSpeed)
         {

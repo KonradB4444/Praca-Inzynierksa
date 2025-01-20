@@ -389,6 +389,7 @@
 "Assets/Scripts/StateMachine/PlayerStateMachine.cs"
 "Assets/Scripts/StateMachine/SpikeState.cs"
 "Assets/Scripts/StateMachine/SpringyState.cs"
+"Assets/Scripts/StateUiDebug.cs"
 -langversion:9.0
 /deterministic
 /optimize+

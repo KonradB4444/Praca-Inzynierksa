@@ -8,21 +8,24 @@ public class IcedState : PlayerBaseState
     public override HashSet<PlayerStates> AllowedTransitions { get; } =
         new HashSet<PlayerStates>
         {
-            PlayerStates.Default
+            PlayerStates.Default,
+            PlayerStates.Bubble
         };
 
     private PlayerMovement playerMovement;
     private Vector3 slidingVelocity;
 
     private float slidingSpeed = 5f;
-    private float exitThresholdSpeed = 1f;
+    private float exitThresholdSpeed = 0.1f;
     private GameObject iceGameObject;
-    private float maxSlidingSpeed = 10f;
     private bool isSlidingDisabled = false;
     private bool isLaunched = false;
     private bool isGroundCheckReady = false;
 
     private Vector3 lastVelocity = Vector3.zero;
+
+    private Vector3 lastPositon = Vector3.zero;
+    private Vector3 trueVelocity;
 
     public override void EnterState(PlayerStateMachine player)
     {
@@ -58,9 +61,15 @@ public class IcedState : PlayerBaseState
         playerMovement.HandleGravity();
         playerMovement.ApplyCharacterMove();
 
-        Debug.Log($"sliding disabled: {isSlidingDisabled}");
-        Debug.Log($"ground check ready: {isGroundCheckReady}");
-        Debug.Log($"is launched: {isLaunched}");
+        Debug.Log($"velocity: {slidingVelocity}");
+
+        trueVelocity = (playerMovement.transform.position - lastPositon) / Time.deltaTime;
+        lastPositon = playerMovement.transform.position;
+
+        if(trueVelocity.magnitude < 0.1f && !isLaunched)
+        {
+            playerStateMachine.SwitchState(PlayerStates.Default);
+        }
 
         if (slidingVelocity.magnitude < exitThresholdSpeed)
         {
@@ -73,11 +82,11 @@ public class IcedState : PlayerBaseState
             if (isGroundCheckReady && groundCheck.isGrounded)
             {
                 Debug.Log("Player has landed, re-enabling sliding.");
-                Debug.Log($"Dupa: {lastVelocity}");
+                //Debug.Log($"Dupa: {lastVelocity}");
                 playerMovement.SetCurrentVelocity(lastVelocity);
                 isGroundCheckReady = false;
                 isSlidingDisabled = false;
-                isLaunched = false;
+                DelayIsLaunched();
             }
         }
         else 
@@ -121,28 +130,6 @@ public class IcedState : PlayerBaseState
 
     private void HandleSliding()
     {
-        Vector3 groundNormal = playerMovement.GetGroundNormal();
-        Vector3 slopeDirection = Vector3.ProjectOnPlane(Vector3.down, groundNormal).normalized;
-
-        Vector3 slidingForce = slopeDirection * slidingSpeed * Time.deltaTime;
-
-        float horizontalInput = playerMovement.inputManager.GetHorizontalInput();
-        Vector3 lateralMovement = playerMovement.orientation.right * horizontalInput * slidingSpeed * Time.deltaTime;
-
-        slidingVelocity += slidingForce;
-        slidingVelocity += lateralMovement;
-
-        if (slidingVelocity.magnitude > maxSlidingSpeed)
-        {
-            slidingVelocity = slidingVelocity.normalized * maxSlidingSpeed;
-        }
-
-        // Apply the combined velocity
-        if (!isSlidingDisabled)
-        {
-            Debug.Log($"Dupa: Sliding Velocity {slidingVelocity}");
-        }
-
         // Detect wall collisions
         if (Physics.Raycast(playerMovement.transform.position, playerMovement.transform.forward, out RaycastHit hitFirst, 1f))
         {
@@ -168,7 +155,7 @@ public class IcedState : PlayerBaseState
 
     private void PerformLaunch()
     {
-        Debug.Log("Performing Launch!");
+        Debug.Log("Dupa: Performing Launch!");
 
         isSlidingDisabled = true;
 
@@ -198,6 +185,13 @@ public class IcedState : PlayerBaseState
         isGroundCheckReady = true;
     }
 
+    private async void DelayIsLaunched()
+    {
+        await Task.Delay(100);
+
+        isLaunched = false;
+    }
+
     public void HandleWallCollision(Collider collider)
     {
         if (collider.CompareTag("WallWithSlope"))
@@ -211,7 +205,7 @@ public class IcedState : PlayerBaseState
 
             Debug.Log($"velocity: {playerMovement.GetCurrentVelocity()}");
         }
-        else if (!collider.CompareTag("Trigger"))
+        else if (!collider.CompareTag("Trigger") && !collider.CompareTag("Water"))
         {
             Debug.Log("Normal wall detected. Exiting Iced State.");
             playerStateMachine.SwitchState(PlayerStates.Default);

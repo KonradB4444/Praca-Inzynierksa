@@ -1,4 +1,4 @@
-using System.Collections;
+ï»¿using System.Collections;
 using UnityEditor;
 using UnityEngine;
 
@@ -26,6 +26,11 @@ public class PlayerMovement : MonoBehaviour
 
     public float WalkSpeed => walkSpeed;
 
+    private bool isMidAir = false;
+    public float moveSpeedMidAir = 1f;
+    public Vector3 jumpAngle = Vector3.zero;
+    [SerializeField] private float allowedMidAirDirectionChange = 45f;
+
     private Vector3 currentVelocity = Vector3.zero;
 
 
@@ -46,7 +51,6 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private bool isInWater = false;
     [SerializeField] public float waterSurfaceY = 0f;
 
-    // Add this delegate and event to PlayerMovement
     public delegate void CollisionHandler(ControllerColliderHit hit);
     public event CollisionHandler OnPlayerCollide;
 
@@ -68,11 +72,52 @@ public class PlayerMovement : MonoBehaviour
 
     public void HandleMovement()
     {
-        Vector2 input = inputManager.GetMovementInput();
+        Vector2 input = inputManager.GetMovementInput().normalized;
         Vector3 move = orientation.right * input.x + orientation.forward * input.y;
+        
+        if(isMidAir)
+        {
+            velocity.x = move.x * moveSpeedMidAir;
+            velocity.z = move.z * moveSpeedMidAir;
 
-        velocity.x = move.x * walkSpeed;
-        velocity.z = move.z * walkSpeed;
+            if(groundCheck.isGrounded || !IsDirectionSame(jumpAngle, move, allowedMidAirDirectionChange))
+            {
+                isMidAir = false;
+            }
+        }
+        else
+        {
+            velocity.x = move.x * walkSpeed;
+            velocity.z = move.z * walkSpeed;
+        }
+    }
+
+    public void StartDelayIsMidAir()
+    {
+        StartCoroutine(DelayIsMidAir());
+    }
+
+    private IEnumerator DelayIsMidAir()
+    {
+        yield return new WaitForSeconds(0.1f);
+
+        isMidAir = true;
+    }
+
+    private bool IsDirectionSame(Vector3 original, Vector3 current, float maxAngleDifference)
+    {
+        // Normalize the vectors to get only the direction
+        Vector3 originalNormalized = original.normalized;
+        Vector3 currentNormalized = current.normalized;
+
+        // Calculate the dot product
+        float dotProduct = Vector3.Dot(originalNormalized, currentNormalized);
+
+        // Convert the dot product to an angle (in degrees)
+        float angleDifference = Mathf.Acos(dotProduct) * Mathf.Rad2Deg;
+
+        // Check if the angle difference is within the acceptable range
+        return angleDifference <= maxAngleDifference;
     }
 
     public void HandleJump(
@@ -82,7 +127,7 @@ public class PlayerMovement : MonoBehaviour
     float? jumpForce = null // optional
 )
     {
-        if (groundCheck.isGrounded && CanJump())
+        if (groundCheck.isGrounded && (CanJump() || jumpCooldown == 0f))
         {
             if (autoJump)
             {
@@ -178,7 +223,7 @@ public class PlayerMovement : MonoBehaviour
         characterController.center = new Vector3(0, newSize.y / 2, 0);
         characterController.height = newSize.y;
     }
-    public void MoveAlongSlide(Vector3 slidingVelocity) //Vector3 direction, float speed
+    public void MoveAlongSlide(Vector3 slidingVelocity)
     {
         velocity = slidingVelocity;
     }
@@ -190,7 +235,7 @@ public class PlayerMovement : MonoBehaviour
 
     public void ResetMovementSpeed()
     {
-        walkSpeed = 5f; // Reset to default speed or adjust as needed
+        walkSpeed = 5f;
     }
 
     public void SetJumpHeight(float newHeight)
@@ -200,7 +245,7 @@ public class PlayerMovement : MonoBehaviour
 
     public void ResetJumpHeight()
     {
-        jumpHeight = 2f; // Default jump height
+        jumpHeight = 2f;
     }
 
     public void ModifyGravity(float newGravity)
@@ -210,7 +255,7 @@ public class PlayerMovement : MonoBehaviour
 
     public void ResetGravity()
     {
-        gravity = 9.81f; // Default gravity
+        gravity = 9.81f;
     }
     public bool CanUseAction(ref float cooldownTimer, float cooldownDuration)
     {
@@ -270,60 +315,9 @@ public class PlayerMovement : MonoBehaviour
 
     private bool hasCollidedWithWall = false;
 
-    //void OnControllerColliderHit(ControllerColliderHit hit)
-    //{
-    //    float angle = Vector3.Angle(hit.normal, Vector3.up);
-
-    //    // Detect wall collision
-    //    if (angle == 90f && !hasCollidedWithWall)
-    //    {
-    //        hasCollidedWithWall = true; // Prevent repeated handling
-
-    //        Debug.Log($"Wall collision detected with object: {hit.collider.name}");
-
-    //        if (playerStateMachine.currentStateEnum == PlayerStates.Iced)
-    //        {
-    //            IcedState icedState = playerStateMachine.GetCurrentState() as IcedState;
-    //            icedState?.HandleWallCollision(hit.collider);
-    //        }
-    //    }
-    //}
-
     public void ResetWallCollisionFlag()
     {
         hasCollidedWithWall = false;
-    }
-
-
-
-    public bool IsWallConnectedToSlope()
-    {
-        // We do a raycast straight down from the characterfs position
-        // (or from the base, offset by a small amount).
-        RaycastHit groundHit;
-        Vector3 rayOrigin = transform.position + Vector3.up * 0.1f; // slight offset to avoid self-intersection
-        
-        // The maximum distance should be enough to definitely hit the ground
-        float maxDistance = 1.4f;
-
-        if (Physics.Raycast(rayOrigin, Vector3.down, out groundHit, maxDistance))
-        {
-            // Calculate the angle between the ground normal and up
-            float angle = Vector3.Angle(groundHit.normal, Vector3.up);
-
-            if (angle > 25f)
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-        else
-        {
-            return false; //no ground below player
-        }
     }
     public void AddForce(Vector3 direction)
     {
@@ -367,7 +361,6 @@ public class PlayerMovement : MonoBehaviour
     }
     public void MoveVertical(float verticalSpeed)
     {
-        // Update only the Y component of velocity
         velocity = new Vector3(velocity.x, verticalSpeed, velocity.z);
     }
 
@@ -382,13 +375,11 @@ public class PlayerMovement : MonoBehaviour
 
         while (elapsedTime < time)
         {
-            // Interpolate position over time
             transform.position = Vector3.Lerp(prevSpike, nextSpike, elapsedTime / time);
             elapsedTime += Time.deltaTime;
-            yield return null; // Wait for the next frame
+            yield return null;
         }
 
-        // Ensure the player lands exactly on the next spike at the end
         transform.position = nextSpike;
 
         Debug.Log("Smooth move complete.");

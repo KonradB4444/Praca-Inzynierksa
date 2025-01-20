@@ -7,8 +7,7 @@ public class SlimeTrigger : MonoBehaviour
     [SerializeField] private Transform orientation;
     [SerializeField] private float slideSpeed = 7f;
     [SerializeField] private PlayerStateMachine playerStateMachine;
-    [SerializeField] private PlayerMovement playerMovement;
-    [SerializeField] private InputManager inputManager;
+    private PlayerMovement playerMovement;
 
     private bool isSliding;
 
@@ -21,7 +20,7 @@ public class SlimeTrigger : MonoBehaviour
         if (isSliding && playerStateMachine.currentStateEnum == PlayerStates.Default)
         {
             //slideDirection = orientation.forward;
-            slideVelocity = slideDirection * slideSpeed;
+            slideVelocity = slideDirection * slideSpeed * 2f;
 
             Debug.Log($"Slide Direction: {slideDirection}");
             Debug.Log($"Slide Velocity: {slideVelocity}");
@@ -29,23 +28,24 @@ public class SlimeTrigger : MonoBehaviour
             playerMovement.MoveAlongSlide(slideVelocity);
             playerMovement.ApplyCharacterMove();
 
-            if (inputManager.GetJumpInput())
+            if (playerMovement.inputManager.GetJumpInput())
             {
+                playerMovement.StartDelayIsMidAir();
+                playerMovement.jumpAngle = slideDirection;
+                playerMovement.moveSpeedMidAir = slideSpeed * 2f;
+                
                 isSliding = false;
-                //StartCoroutine(DisableTriggerTemporarily());
                 playerMovement.Jump(0f, 1f);
-                //StartCoroutine(DisableTriggerTemporarily());
-                //playerMovement.ResetMovementSpeed();
             }
         }
         else if (playerStateMachine.currentStateEnum == PlayerStates.Crushed)
         {
             playerMovement.SetCurrentVelocity(Vector3.zero);
 
-            if (inputManager.GetJumpInput())
+            if (playerMovement.inputManager.GetJumpInput())
             {
                 isSliding = false;
-                playerStateMachine.SwitchState(PlayerStates.Default);
+                if(playerStateMachine.currentStateEnum != PlayerStates.Crushed) playerStateMachine.SwitchState(PlayerStates.Default);
                 playerMovement.Jump(0f, 1f);
             }
         }
@@ -57,9 +57,13 @@ public class SlimeTrigger : MonoBehaviour
         {
             playerMovement = other.GetComponent<PlayerMovement>();
 
+            playerMovement = playerStateMachine.GetComponent<PlayerMovement>();
+
             Vector3 playerVelocity = playerMovement.GetCurrentVelocity();
 
-            if (playerVelocity == Vector3.zero)
+            Debug.Log($"Player Velocity: {playerVelocity}");
+
+            if (playerVelocity.x == 0f && playerVelocity.z == 0f)
             {
                 slideDirection = orientation.forward;
             }
@@ -69,8 +73,6 @@ public class SlimeTrigger : MonoBehaviour
             }
 
             isSliding = true;
-
-            playerMovement.SetMovementSpeed(0);
         }
 
         if (other.CompareTag("Player"))
@@ -111,21 +113,6 @@ public class SlimeTrigger : MonoBehaviour
                 }
             }
         }
-    }
-    private IEnumerator DisableTriggerTemporarily()
-    {
-        // Disable the trigger collider
-        GetComponent<Collider>().enabled = false;
-
-        Debug.Log("Trigger temporarily disabled.");
-
-        // Wait for a short duration (adjust as needed)
-        yield return new WaitForSeconds(0.5f);
-
-        // Re-enable the trigger collider
-        GetComponent<Collider>().enabled = true;
-
-        Debug.Log("Trigger re-enabled.");
     }
 
 }

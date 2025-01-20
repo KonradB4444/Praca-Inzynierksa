@@ -16,17 +16,17 @@ public class HurtState : PlayerBaseState
     private Color hurtColor = Color.red;
     private Color recoveryColor = Color.blue;
 
-    private float recoveryWindow = 0.5f; // Time window for recovery
+    private float recoveryWindow = 0.5f;
     private float recoveryTimer = 0f;
     private bool recoveryAvailable = false;
     private bool recoveryTriggeredOnce = false;
 
-    private float hurtDuration = 5f; // Total duration of HurtState
+    private float hurtDuration = 5f;
     private float hurtTimer = 0f;
 
-    private float recoveryDelay = 1f; // Delay before recovery opportunity
+    private float recoveryDelay = 1f;
     private bool recoveryWindowReady = false;
-    private bool recoveryBlocked = false; // Flag to block recovery if spamming occurs
+    private bool recoveryBlocked = false;
 
     public override void EnterState(PlayerStateMachine player)
     {
@@ -43,12 +43,12 @@ public class HurtState : PlayerBaseState
 
         inputManager.CanJump = false;
 
-        Vector2 lastInput = inputManager.GetMovementInput();
+        Vector3 lastInput = inputManager.GetMovementInput();
         Vector3 pushDirection;
 
-        if (lastInput != Vector2.zero)
+        if (lastInput != Vector3.zero)
         {
-            pushDirection = new Vector3(-lastInput.x, 0, -lastInput.y).normalized;
+            pushDirection = new Vector3(-lastInput.x, -lastInput.z, -lastInput.y).normalized;
         }
         else
         {
@@ -64,7 +64,7 @@ public class HurtState : PlayerBaseState
         recoveryAvailable = false;
         recoveryWindowReady = false;
         recoveryTriggeredOnce = false;
-        recoveryBlocked = false; // Reset flag when entering HurtState
+        recoveryBlocked = false;
 
         Debug.Log("Entered Hurt State");
     }
@@ -73,11 +73,17 @@ public class HurtState : PlayerBaseState
     {
         hurtTimer += Time.deltaTime;
         playerMovement.HandleGravity();
+        playerMovement.ApplyCharacterMove();
+
+        if (groundCheck.isGrounded)
+        {
+            playerMovement.SetCurrentVelocity(new Vector3(0f, 0f, 0f));
+        }
 
         // Check for spamming before recovery window
         if (!recoveryWindowReady && inputManager.GetJumpInputDown())
         {
-            recoveryBlocked = true; // Block recovery if jump pressed too early
+            recoveryBlocked = true;
             Debug.Log("Recovery blocked due to spamming.");
         }
 

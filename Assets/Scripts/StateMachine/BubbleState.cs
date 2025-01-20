@@ -7,7 +7,8 @@ public class BubbleState : PlayerBaseState
     new HashSet<PlayerStates>
     {
             PlayerStates.Default,
-            PlayerStates.Spike
+            PlayerStates.Spike,
+            PlayerStates.Springy
     };
     private float buoyancyForce = 5f;
     private float maxBuoyancyForce = 30f;
@@ -52,7 +53,7 @@ public class BubbleState : PlayerBaseState
 
         buoyancyForce = Mathf.Clamp(buoyancyForce + buoyancyForce * Time.deltaTime, buoyancyForce, maxBuoyancyForce);
 
-        if (buoyancyForce > 15f && playerMovement.IsInWater)
+        if (buoyancyForce > 20f && playerMovement.IsInWater)
         {
             playerMovement.MoveVertical(buoyancyForce);
 
